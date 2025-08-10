@@ -1,10 +1,10 @@
 package com.example.minestomstarter;
 
-import com.example.minestomstarter.commands.GrantPermissions;
-import com.example.minestomstarter.commands.PingCommand;
-import com.example.minestomstarter.commands.SetHealthCommand;
+import com.example.minestomstarter.commands.*;
+import com.example.minestomstarter.listeners.BlockHandler;
 import com.example.minestomstarter.perms.Perms;
 import net.minestom.server.MinecraftServer;
+import net.minestom.server.command.CommandSender;
 import net.minestom.server.command.builder.Command;
 import net.minestom.server.coordinate.Pos;
 import net.minestom.server.entity.Player;
@@ -78,10 +78,48 @@ public class Main {
         MinecraftServer.getCommandManager().register(new GrantPermissions());
         MinecraftServer.getCommandManager().register(new PingCommand());
         MinecraftServer.getCommandManager().register(new SetHealthCommand());
+        MinecraftServer.getCommandManager().register(new GamemodeCommand());
+        MinecraftServer.getCommandManager().register(new PermsReloadCommand());
+
+
 
         // ---- Start server ----
         minecraftServer.start("0.0.0.0", 25565);
+        BlockHandler.register();
+
+        startConsoleInput();
     }
 
 
+    private static void startConsoleInput() {
+        var cm = MinecraftServer.getCommandManager();
+        CommandSender console = cm.getConsoleSender();
+
+        Thread t = new Thread(() -> {
+            Scanner scanner = new Scanner(System.in);
+            while (true) {
+                try {
+                    if (!scanner.hasNextLine()) break;
+                    String line = scanner.nextLine().trim();
+                    if (line.isEmpty()) continue;
+
+                    // allow both "command" and "/command"
+                    if (line.startsWith("/")) line = line.substring(1);
+
+                    // simple builtin: stop/exit to shut down server cleanly
+                    if (line.equalsIgnoreCase("stop") || line.equalsIgnoreCase("exit")) {
+                        console.sendMessage("Shutting down...");
+                        MinecraftServer.stopCleanly();
+                        break;
+                    }
+
+                    cm.execute(console, line);
+                } catch (Throwable e) {
+                    e.printStackTrace();
+                }
+            }
+        }, "ConsoleInput");
+        t.setDaemon(true);
+        t.start();
+    }
 }

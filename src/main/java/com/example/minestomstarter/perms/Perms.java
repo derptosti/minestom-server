@@ -64,4 +64,25 @@ public class Perms {
 
         return effective;
     }
+
+    public static boolean isCategory(String key) {
+        return categories().isCategory(key);
+    }
+
+    public static boolean isNode(String key) {
+        String k = key.toLowerCase(Locale.ROOT);
+        return categories().categories.values().stream().anyMatch(list -> list.contains(k));
+    }
+
+    public static boolean isKnownPermission(String key) {
+        return isCategory(key) || isNode(key);
+    }
+
+    // Handy, if you need a full list (for messages or suggestions)
+    public static Set<String> allFromCategories() {
+        java.util.Set<String> out = new java.util.HashSet<>();
+        out.addAll(categories().categories.keySet());                  // categories
+        categories().categories.values().forEach(out::addAll);         // nodes
+        return out;
+    }
 }

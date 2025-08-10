@@ -4,13 +4,16 @@
       "block.break",
       "block.place"
     ],
-    "combat": [
-      "combat.attack",
-      "combat.defend"
+    "gamemode": [
+      "gamemode.creative",
+      "gamemode.survival",
+      "gamemode.adventure",
+      "gamemode.spectator"
     ],
     "admin": [
       "op",
-      "sethealth"
+      "sethealth",
+      "block"
     ]
   }
 }

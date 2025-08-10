@@ -8,11 +8,13 @@ import net.minestom.server.command.builder.arguments.ArgumentType;
 import net.minestom.server.command.builder.suggestion.SuggestionEntry;
 import net.minestom.server.entity.Player;
 
+import java.util.HashSet;
 import java.util.Locale;
+import java.util.Set;
 
 public class GrantPermissions extends Command {
     public GrantPermissions() {
-        super("grantpermissions", "perms");
+        super("perms");
 
         setCondition((sender, cmd) -> Perms.has(sender, "op"));
 
@@ -31,16 +33,54 @@ public class GrantPermissions extends Command {
                     .forEach(p -> suggestion.addEntry(new SuggestionEntry(p.getUsername())));
         });
 
-        var permArg   = ArgumentType.Word("permission");
-        permArg.setSuggestionCallback((sender, context, suggestion) -> {
-            // suggest category names first (e.g., "block", "admin", "combat")
-            Perms.categories().categories.keySet()
-                    .forEach(cat -> suggestion.addEntry(new SuggestionEntry(cat)));
+        var permArg = ArgumentType.Word("permission");
 
-            // then suggest all child nodes inside each category (e.g., "block.break", "block.place")
-            Perms.categories().categories.values()
-                    .forEach(list -> list.forEach(node -> suggestion.addEntry(new SuggestionEntry(node))));
+        permArg.setSuggestionCallback((sender, ctx, sug) -> {
+            String raw = ctx.getRaw(permArg);
+            String q = (raw == null ? "" : raw.trim().toLowerCase(Locale.ROOT));
+
+            var cats = Perms.categories().categories; // Map<String, List<String>>
+            Set<String> added = new HashSet<>();
+
+            if (q.isEmpty()) {
+                // No prefix → show all categories + all child perms
+                for (String cat : cats.keySet()) {
+                    if (added.add(cat)) sug.addEntry(new SuggestionEntry(cat));
+                }
+                for (var e : cats.entrySet()) {
+                    for (String node : e.getValue()) {
+                        if (added.add(node)) sug.addEntry(new SuggestionEntry(node));
+                    }
+                }
+            } else {
+                // Show matching categories
+                for (String cat : cats.keySet()) {
+                    if (cat.toLowerCase(Locale.ROOT).startsWith(q) && added.add(cat)) {
+                        sug.addEntry(new SuggestionEntry(cat));
+                    }
+                }
+
+                // Show matching child perms
+                for (var e : cats.entrySet()) {
+                    for (String node : e.getValue()) {
+                        if (node.toLowerCase(Locale.ROOT).startsWith(q) && added.add(node)) {
+                            sug.addEntry(new SuggestionEntry(node));
+                        }
+                    }
+                }
+
+                // Optional nicety: if exactly matches a category, only show its children
+                if (cats.containsKey(q)) {
+                    sug.getEntries().clear(); // remove other suggestions
+                    added.clear();
+                    if (added.add(q)) sug.addEntry(new SuggestionEntry(q));
+                    for (String node : cats.get(q)) {
+                        if (added.add(node)) sug.addEntry(new SuggestionEntry(node));
+                    }
+                }
+            }
         });
+
 
         // /grantpermissions grant <player> <permission>
         addSyntax((sender, ctx) -> {
@@ -53,7 +93,18 @@ public class GrantPermissions extends Command {
                 return;
             }
 
+
             String permission = ctx.get(permArg).toLowerCase(Locale.ROOT);
+
+            if (!Perms.isKnownPermission(permission)) {
+                sender.sendMessage("Unknown permission \"" + permission + "\". " +
+                        "Use a category or node defined in permissions.json.");
+                // Optional: show a short hint of matches
+                // var sample = Perms.allFromCategories().stream().limit(8).toList();
+                // sender.sendMessage("Examples: " + String.join(", ", sample));
+                return;
+            }
+
             if (action.equals("grant")) {
                 Perms.grant(target, permission);
                 refreshCommandsFor(target);
