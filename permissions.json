@@ -1,0 +1,16 @@
+{
+  "categories": {
+    "block": [
+      "block.break",
+      "block.place"
+    ],
+    "combat": [
+      "combat.attack",
+      "combat.defend"
+    ],
+    "admin": [
+      "op",
+      "sethealth"
+    ]
+  }
+}

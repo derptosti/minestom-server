@@ -1,0 +1,7 @@
+{
+  "ranks": {
+    "default": ["block.break"],
+    "builder": ["block", "combat.defend"],
+    "admin": ["block", "combat", "admin"]
+  }
+}
